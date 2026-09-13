@@ -1,6 +1,6 @@
 import os
 import flet as ft
-import pandas as pd
+from openpyxl import Workbook, load_workbook
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
@@ -63,49 +63,90 @@ def main(page: ft.Page):
         snack_bar.open = True
         page.update()
 
-    # --- 2. تصدير كامل النتائج إلى ملف Excel ---
+    # --- 2. تصدير كامل النتائج إلى ملف Excel باستخدام openpyxl فقط ---
     def export_excel_click(e):
         downloads_dir = os.path.join(os.path.expanduser("~"), "Downloads")
         file_path = os.path.join(downloads_dir, "نتائج_طلاب_مدرسة_الهدى.xlsx")
         
-        df = pd.DataFrame(students_data)
-        df.rename(columns={
-            "id": "رقم الجلوس",
-            "name": "اسم الطالب",
-            "arabic": "اللغة العربية",
-            "math": "الرياضيات",
-            "english": "اللغة الإنجليزية",
-            "physics": "الفيزياء"
-        }, inplace=True)
-        
-        df.to_excel(file_path, index=False)
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "النتائج"
+
+        # كتابة العناوين الرئيسية
+        headers = ["رقم الجلوس", "اسم الطالب", "اللغة العربية", "الرياضيات", "اللغة الإنجليزية", "الفيزياء"]
+        ws.append(headers)
+
+        # كتابة بيانات الطلاب
+        for s in students_data:
+            ws.append([
+                s["id"],
+                s["name"],
+                s.get("arabic", 0),
+                s.get("math", 0),
+                s.get("english", 0),
+                s.get("physics", 0)
+            ])
+
+        wb.save(file_path)
         
         snack_bar = ft.SnackBar(ft.Text(f"تم تصدير ملف Excel بنجاح إلى: {file_path}"))
         page.overlay.append(snack_bar)
         snack_bar.open = True
         page.update()
 
-    # --- 3. استيراد النتائج من ملف Excel ---
+    # --- 3. استيراد النتائج من ملف Excel باستخدام openpyxl فقط ---
     def on_file_picked(e: ft.FilePickerResultEvent):
         if e.files:
             file_path = e.files[0].path
             try:
-                df = pd.read_excel(file_path)
+                wb = load_workbook(filename=file_path, data_only=True)
+                ws = wb.active
+
+                rows = list(ws.iter_rows(values_only=True))
+                if not rows:
+                    return
+
+                # قراءة الهيدر لتحديد مواقع الأعمدة
+                header = [str(h).strip() if h is not None else "" for h in rows[0]]
+                
+                def get_idx(name_list):
+                    for name in name_list:
+                        if name in header:
+                            return header.index(name)
+                    return -1
+
+                idx_id = get_idx(["رقم الجلوس", "id", "الرقم"])
+                idx_name = get_idx(["اسم الطالب", "name", "الاسم"])
+                idx_arabic = get_idx(["اللغة العربية", "arabic", "عربي"])
+                idx_math = get_idx(["الرياضيات", "math", "رياضيات"])
+                idx_english = get_idx(["اللغة الإنجليزية", "english", "إنجليزي"])
+                idx_physics = get_idx(["الفيزياء", "physics", "فيزياء"])
+
                 students_data.clear()
-                for _, row in df.iterrows():
-                    students_data.append({
-                        "id": str(row.get("رقم الجلوس", row.get("id", ""))),
-                        "name": str(row.get("اسم الطالب", row.get("name", ""))),
-                        "arabic": row.get("اللغة العربية", row.get("arabic", 0)),
-                        "math": row.get("الرياضيات", row.get("math", 0)),
-                        "english": row.get("اللغة الإنجليزية", row.get("english", 0)),
-                        "physics": row.get("الفيزياء", row.get("physics", 0)),
-                    })
+
+                for row in rows[1:]:
+                    if not any(row):
+                        continue
+                    
+                    student_id = str(row[idx_id]) if idx_id != -1 and row[idx_id] is not None else ""
+                    student_name = str(row[idx_name]) if idx_name != -1 and row[idx_name] is not None else ""
+                    
+                    if student_id or student_name:
+                        students_data.append({
+                            "id": student_id,
+                            "name": student_name,
+                            "arabic": int(row[idx_arabic]) if idx_arabic != -1 and row[idx_arabic] is not None else 0,
+                            "math": int(row[idx_math]) if idx_math != -1 and row[idx_math] is not None else 0,
+                            "english": int(row[idx_english]) if idx_english != -1 and row[idx_english] is not None else 0,
+                            "physics": int(row[idx_physics]) if idx_physics != -1 and row[idx_physics] is not None else 0,
+                        })
+
                 refresh_table()
                 snack_bar = ft.SnackBar(ft.Text("تم استيراد قائمة الطلاب والنتائج من ملف Excel بنجاح!"))
                 page.overlay.append(snack_bar)
                 snack_bar.open = True
                 page.update()
+
             except Exception as ex:
                 snack_bar = ft.SnackBar(ft.Text(f"حدث خطأ أثناء استيراد الملف: {str(ex)}"))
                 page.overlay.append(snack_bar)
@@ -153,7 +194,7 @@ def main(page: ft.Page):
             )
         page.update()
 
-    # --- 5. زر إضافة طالب يدوي ---
+    # --- 5. أدوات إدخال وإضافة طالب يدوي ---
     txt_id = ft.TextField(label="رقم الجلوس", width=120)
     txt_name = ft.TextField(label="اسم الطالب", width=200)
     txt_arabic = ft.TextField(label="عربي", width=80)
