@@ -39,9 +39,10 @@ jobs:
           pip install flet
 
       # 5. بناء الـ APK (استخدام echo "y" لتجاوز سؤال الموافقة على تنزيل Flutter)
+     # 5. بناء الـ APK
       - name: Build Android APK
         run: |
-          echo "y" | flet build apk --vv
+          echo "y" | flet build apk -v
 
       # 6. رفع ملف الـ APK الناتج كـ Artifact للتنزيل
       - name: Upload APK Artifact
