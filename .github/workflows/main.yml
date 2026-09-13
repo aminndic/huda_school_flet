@@ -24,7 +24,7 @@ jobs:
       # Pre-installing Flutter here (instead of letting `flet build` download
       # it on the fly) makes the build faster and its progress visible in the
       # Actions log instead of appearing to hang.
-- name: Set up Flutter
+ - name: Set up Flutter
   uses: subosito/flutter-action@v2
   with:
     flutter-version: '3.44.8'
