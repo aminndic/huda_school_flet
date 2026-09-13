@@ -1,0 +1,15 @@
+[project]
+name = "hudaschool"
+version = "1.0.0"
+description = "نظام إدارة مدرسة الهدى الثانوية بنين"
+dependencies = ["flet==0.86.5"]
+
+[tool.flet]
+org = "com.hudahighsecondaryschool"
+product = "مدرسة الهدى الثانوية بنين"
+company = "Huda High Secondary School"
+
+[tool.flet.android]
+# Keep target/min SDK modest and conservative for broad device compatibility.
+min_sdk_version = 24
+target_sdk_version = 34
