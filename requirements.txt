@@ -1,3 +1,3 @@
 flet
-openpyxl
+requirements = python3,kivy==2.3.0,openpyxl
 reportlab
